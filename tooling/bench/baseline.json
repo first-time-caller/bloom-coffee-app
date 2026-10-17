@@ -1,0 +1,9 @@
+{
+  "_comment": "ops/sec relative to the calibration loop (min of 2 runs). Regenerate with: npm run gate:bench -- --update",
+  "maxSlowdown": 0.25,
+  "rel": {
+    "parseShot": 1.8196146827475619,
+    "parseIndex": 24.998931576525106,
+    "shotToCurve": 7.277777317032146
+  }
+}

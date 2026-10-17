@@ -1,0 +1,4 @@
+{
+  "_comment": "Hosts the web app may contact at runtime, besides its own origin. Start EMPTY and keep it that way: Bloom is local-first and sends nothing to third parties. Adding a host here is a privacy decision and needs review (docs/QUALITY-GATES.md). Hostnames only, exact match.",
+  "hosts": []
+}

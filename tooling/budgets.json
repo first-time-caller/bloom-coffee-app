@@ -1,0 +1,50 @@
+{
+  "_comment": "Gzip budgets in bytes (zlib level 9). Set to measured size + ~10% headroom on 2026-10-17. Change deliberately in a PR that explains why (docs/QUALITY-GATES.md).",
+  "bundles": {
+    "web/index.html": {
+      "gzipBytes": 153200,
+      "measuredAtSetup": 139266
+    },
+    "web/vendor/bloom-slog.js": {
+      "gzipBytes": 4096,
+      "measuredAtSetup": 2460,
+      "_note": "hard cap from the plan: <= 4 KB gz"
+    },
+    "web/bloom-sync.js": {
+      "gzipBytes": 12200,
+      "measuredAtSetup": 11061
+    },
+    "backend worker (wrangler deploy --dry-run)": {
+      "gzipBytes": 47200,
+      "measuredAtSetup": 42834
+    }
+  },
+  "lighthouse": {
+    "performance": 0.9,
+    "accessibility": 0.95,
+    "best-practices": 0.95
+  },
+  "interaction": {
+    "historyOpenMs": 300,
+    "longTaskMs": 50,
+    "cpuThrottle": 4,
+    "records": 1000
+  },
+  "memory": {
+    "loops": 20,
+    "maxHeapGrowthBytes": 2097152,
+    "maxDomNodeGrowthPct": 5,
+    "maxListenerGrowth": 20
+  },
+  "parserAllocation": {
+    "_comment": "Heap bytes allocated per call, measured with --expose-gc over N iterations. Budget = measured + ~25%.",
+    "parseShot_000123": 210944,
+    "parseIndex_recent": 2048,
+    "shotToCurve_000123": 24576,
+    "_measured": {
+      "parseShot_000123": 167973,
+      "parseIndex_recent": 1273,
+      "shotToCurve_000123": 18975
+    }
+  }
+}

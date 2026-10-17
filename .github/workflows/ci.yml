@@ -1,0 +1,186 @@
+# Bloom quality gates. One job per gate, run in parallel; every job is REQUIRED (see docs/QUALITY-GATES.md for the
+# branch-protection checklist). Locally the same gates run with `npm run gates` (or `npm run gate:<name>`).
+#
+# Action versions are pinned to a major tag, and Dependabot (.github/dependabot.yml) keeps them current.
+# For stricter supply-chain hygiene pin each `uses:` to a full commit SHA instead (Dependabot can update SHA pins too).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: read-only token everywhere; no job needs more.
+permissions:
+  contents: read
+
+# A new push to the same branch/PR cancels the run that is still going.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+  FORCE_COLOR: '0'
+  WRANGLER_SEND_METRICS: 'false'
+
+jobs:
+  reliability:
+    name: "Gate 1: Reliability"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the immutable-migrations check diffs against the base branch
+      - uses: ./.github/actions/setup
+        with:
+          packages: packages/slog packages/sync backend tooling
+          browsers: 'true'
+      - name: Migrations already on the base branch are immutable
+        if: github.event_name == 'pull_request'
+        run: |
+          changed=$(git diff --name-status "origin/${{ github.base_ref }}...HEAD" -- backend/migrations | grep -v '^A' || true)
+          if [ -n "$changed" ]; then
+            echo "::error::Existing migrations were modified, renamed or deleted. Add a new migration instead:"
+            echo "$changed"
+            exit 1
+          fi
+      - name: Run gate
+        run: npm --prefix tooling run gate:reliability
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reliability-reports
+          if-no-files-found: ignore
+          path: |
+            packages/*/coverage/lcov-report
+            backend/coverage/lcov-report
+            tooling/playwright-report
+            tooling/test-results
+
+  speed:
+    name: "Gate 2: Speed"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          packages: backend tooling
+          browsers: 'true'
+      - name: Run gate
+        run: npm --prefix tooling run gate:speed
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: speed-reports
+          if-no-files-found: ignore
+          path: |
+            tooling/.lighthouseci
+            tooling/playwright-report
+            tooling/test-results
+
+  resources:
+    name: "Gate 3: Resource efficiency"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          packages: tooling
+          browsers: 'true'
+      - name: Run gate
+        run: npm --prefix tooling run gate:resources
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resources-reports
+          if-no-files-found: ignore
+          path: |
+            tooling/playwright-report
+            tooling/test-results
+
+  state:
+    name: "Gate 4: Predictable state"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          packages: tooling
+          browsers: 'true'
+      - name: Run gate
+        run: npm --prefix tooling run gate:state
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: state-reports
+          if-no-files-found: ignore
+          path: |
+            tooling/playwright-report
+            tooling/test-results
+
+  accessibility:
+    name: "Gate 5: Accessibility"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          packages: tooling
+          browsers: 'true'
+      - name: Run gate
+        run: npm --prefix tooling run gate:a11y
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: a11y-reports
+          if-no-files-found: ignore
+          path: |
+            tooling/playwright-report
+            tooling/test-results
+
+  privacy:
+    name: "Gate 6: Privacy"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks scans the full history
+      - uses: ./.github/actions/setup
+        with:
+          packages: tooling
+          browsers: 'true'
+      - name: Install gitleaks (pinned version, SHA-256 verified)
+        run: npm --prefix tooling run install:gitleaks
+      - name: Run gate
+        run: npm --prefix tooling run gate:privacy
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: privacy-reports
+          if-no-files-found: ignore
+          path: |
+            tooling/audit-reports
+            tooling/playwright-report
+            tooling/test-results
+
+  dependency-review:
+    name: "Gate 6b: Dependency review"
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: never

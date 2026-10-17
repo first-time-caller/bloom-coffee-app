@@ -1,4 +1,14 @@
 {
   "name": "bloom",
-  "private": true
+  "private": true,
+  "scripts": {
+    "gates": "npm --prefix tooling run gates",
+    "gate:reliability": "npm --prefix tooling run gate:reliability",
+    "gate:speed": "npm --prefix tooling run gate:speed",
+    "gate:resources": "npm --prefix tooling run gate:resources",
+    "gate:state": "npm --prefix tooling run gate:state",
+    "gate:a11y": "npm --prefix tooling run gate:a11y",
+    "gate:privacy": "npm --prefix tooling run gate:privacy",
+    "setup": "npm --prefix packages/slog ci && npm --prefix packages/sync ci && npm --prefix backend ci && npm --prefix tooling ci"
+  }
 }

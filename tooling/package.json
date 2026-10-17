@@ -1,0 +1,36 @@
+{
+  "name": "bloom-tooling",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Cross-cutting quality gates for Bloom (e2e, a11y, perf, privacy, migrations). See ../docs/QUALITY-GATES.md",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "gates": "node scripts/run-gate.mjs all",
+    "gate:reliability": "node scripts/run-gate.mjs reliability",
+    "gate:speed": "node scripts/run-gate.mjs speed",
+    "gate:resources": "node scripts/run-gate.mjs resources",
+    "gate:state": "node scripts/run-gate.mjs state",
+    "gate:a11y": "node scripts/run-gate.mjs a11y",
+    "gate:privacy": "node scripts/run-gate.mjs privacy",
+    "test:e2e": "playwright test",
+    "migrations:lint": "node scripts/migration-lint.mjs",
+    "migrations:lock": "node scripts/migration-lint.mjs --update-lock",
+    "coverage:baseline": "node scripts/coverage-check.mjs --update-baseline",
+    "bench:baseline": "node scripts/bench-check.mjs --update",
+    "alloc:baseline": "node --expose-gc --min-semi-space-size=64 --max-semi-space-size=64 scripts/alloc-bench.mjs --update",
+    "install:gitleaks": "node scripts/install-gitleaks.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@lhci/cli": "^0.15.1",
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.20.5",
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.0"
+  }
+}

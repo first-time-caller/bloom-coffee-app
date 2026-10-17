@@ -1,0 +1,13 @@
+{
+  "_comment": "Coverage ratchet. Values may only go up. Regenerate deliberately with: npm --prefix tooling run coverage:baseline (see docs/QUALITY-GATES.md).",
+  "webApp": {
+    "bytes": 59.75,
+    "functions": 56.02,
+    "functionCount": 880
+  },
+  "webSync": {
+    "bytes": 12.32,
+    "functions": 16.92,
+    "functionCount": 195
+  }
+}

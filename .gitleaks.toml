@@ -1,0 +1,13 @@
+# Privacy gate: secret scanning (gitleaks). Extends the default ruleset; allowlists only things proven to be non-secrets.
+title = "Bloom gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures and lockfiles. Add narrowly (a path or a regex for one specific value), never a whole directory of real code."
+paths = [
+  '''(^|/)package-lock\.json$''',
+  '''(^|/)packages/slog/test/fixtures/''',   # binary .slog fixtures
+  '''(^|/)backend/test/''',                  # throwaway passwords like "correct horse battery" used against a local D1
+]

@@ -1,0 +1,8 @@
+node_modules/
+.bin/
+test-results/
+playwright-report/
+coverage/
+.lighthouseci/
+bench/.results.json
+audit-reports/

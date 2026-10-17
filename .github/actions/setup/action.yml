@@ -1,0 +1,43 @@
+name: Setup Bloom
+description: Node 22 with a cached npm, `npm ci` in the requested packages, and (optionally) Playwright's Chromium.
+inputs:
+  packages:
+    description: Space-separated package directories to `npm ci` (each has its own lockfile; there are no workspaces).
+    required: true
+  browsers:
+    description: "'true' to install Playwright Chromium with system dependencies."
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: |
+          packages/slog/package-lock.json
+          packages/sync/package-lock.json
+          backend/package-lock.json
+          tooling/package-lock.json
+    - name: npm ci
+      shell: bash
+      run: |
+        for p in ${{ inputs.packages }}; do
+          echo "::group::npm ci in $p"
+          npm ci --prefix "$p" --no-audit --no-fund
+          echo "::endgroup::"
+        done
+    - name: Cache Playwright browsers
+      if: inputs.browsers == 'true'
+      id: pw-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('tooling/package-lock.json') }}
+    - name: Install Chromium (with OS dependencies)
+      if: inputs.browsers == 'true'
+      shell: bash
+      working-directory: tooling
+      # Browsers are cached, but --with-deps always has to install the OS libraries on a fresh runner.
+      run: npx playwright install --with-deps chromium

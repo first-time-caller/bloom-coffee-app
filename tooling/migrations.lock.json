@@ -1,0 +1,7 @@
+{
+  "_comment": "SHA-256 of every migration that is on main. Locked migrations are immutable. Add entries with: npm run gate:migrations:lock (after the migration merges).",
+  "migrations": {
+    "0001_init.sql": "acfb428021d6a85d458565594e322e414addaf966b27edba8a4cfda6a82587ad",
+    "0002_e2ee.sql": "4729929945a6f38512dab7e47c89b48e52d3d36425db5f0042582537038be962"
+  }
+}

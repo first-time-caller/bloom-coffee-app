@@ -1,0 +1,5 @@
+{
+  "_comment": "Known privacy/security defects that the gates report instead of failing on. Each entry must be removed as soon as the defect is fixed (the gates fail on stale entries). Never add an entry to make a red gate green without a tracked reason.",
+  "thirdPartyHosts": {},
+  "_history": "2026-10-17: gates first reported Google Fonts (fonts.googleapis.com, fonts.gstatic.com) and a missing Content-Security-Policy as KNOWN-BUGs; both were fixed on the same day (fonts self-hosted/removed, CSP meta added) and their entries removed."
+}
