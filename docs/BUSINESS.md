@@ -38,6 +38,13 @@ Status: draft. Prices and fees below come from memory as of 2026 and are **not v
 - **Web:** Stripe Checkout.
 - **Entitlement is account metadata.** It is stored in plaintext server-side, separate from the end-to-end encrypted data, because the server must enforce it. It records the tier, source (apple, google or stripe), expiry and the original transaction id. Nothing about brews or coffee is needed.
 - A purchase on any platform unlocks Pro on all platforms at the next sync.
+- **Verification without depending on store uptime:**
+  - StoreKit 2 transactions are JWS signed by Apple and can be verified offline against Apple's certificate chain.
+  - Google Play purchases carry an RSA signature that can be verified with the app's public key.
+  - The Worker verifies signatures locally and calls the store APIs only to check for refunds or revocations, retrying with backoff.
+  - The Worker issues a signed entitlement ticket (Ed25519, about 7 days, renewed at each sync) that the app checks offline.
+  - The gate **fails open**: if verification can't complete because of a store outage, a timeout or no network, the user brews.
+  - A determined person on a jailbroken device could bypass the gate. At these prices that is accepted, so don't build DRM.
 - **Third-party decision (open):**
   - **Option A, RevenueCat:** faster to build. It is a third party that receives an app user id and purchase data. If chosen, add it to the privacy policy and to `tooling/allowed-hosts.json` with a written justification. Free up to about $2.5k MTR (verify).
   - **Option B, direct (preferred):** the Worker validates App Store Server API and Play Developer API receipts, and handles server notifications (App Store Server Notifications v2, Play RTDN) and Stripe webhooks. More work, but no third party sees users.
@@ -79,8 +86,12 @@ Status: draft. Prices and fees below come from memory as of 2026 and are **not v
 
 - **Privacy policy and store privacy labels:** Apple's nutrition label and Google's Data safety form. These must match the privacy gate.
 - **Terms of sale and refund policy.**
+- **Account deletion:** in the app, and for a forgotten password, an emailed link with a 7-day cooling-off period (see PLAN.md). Proving ownership of the email is enough, because deleting ciphertext reveals nothing to an attacker. The worst an attacker can do is destroy data, which the cooling-off period and cancellation guard against.
 - **GDPR and UK GDPR:** a lawful basis, export and deletion (already planned), a data processing agreement with Cloudflare, and the EU/UK data location question.
-- **Encryption export compliance:** Apple's export question. Standard cryptography is usually exempt, but the form must still be answered.
+- **Encryption export compliance:**
+  - Do **not** set `ITSAppUsesNonExemptEncryption = false` by default. Bloom encrypts user data itself (end-to-end), not only through the OS's HTTPS, so "false" may be an incorrect declaration.
+  - The likely position is mass-market standard cryptography (AES-GCM, PBKDF2, HKDF), where the app's primary function is not information security. That usually means no CCATS, but possibly an annual self-classification report to BIS and a separate declaration for distribution in France.
+  - Confirm with Apple's current export compliance documentation and a lawyer before first submission, then set the plist key to match the answer.
 - **Tax:** VAT and GST on web sales, and sales tax. The stores handle tax on their own sales.
 - **Trademark search for "Bloom"** before spending on branding, because the name is crowded in coffee.
 - **Third-party licences:** GaggiMate is CC BY-NC-SA. Bloom is clean-room and must stay that way. Fonts are OFL. Keep `docs/LICENSES.md` up to date.

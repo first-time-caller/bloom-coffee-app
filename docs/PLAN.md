@@ -35,3 +35,27 @@ The browser cannot reach the machine (plain http, no CORS). Only the native app 
 5. A live brewing view and profile selection.
 
 Phase A runs steps 1, 2 and 4 in parallel. Phase B runs steps 3 and 5 after A is integrated.
+
+## Requirements carried into later phases
+
+**Sync (in progress)**
+- Conflicts merge field by field inside the encrypted payload, using hybrid logical clocks. Blind last-write-wins on device timestamps is not used, because skewed clocks would lose edits. The server only orders writes with `seq` and rejects stale writes with 409.
+
+**Mobile (Expo)**
+- Live machine data comes over wifi (the WebSocket), not phone Bluetooth. The scale pairs with the GaggiMate, and the machine records every shot itself. If the app is backgrounded mid-shot, only the live view pauses. On return, the app reconnects and imports the full `.slog`, so no data is lost. Do **not** add background modes or foreground services for this path.
+- If phone-to-scale Bluetooth is ever added (for example pour-over with an Acaia), it needs a development build with a BLE config plugin. iOS needs the `bluetooth-central` background mode with a justification for App Review. Android 14+ needs a foreground service of type `connectedDevice` with a visible notification. Brew state must still be restorable from timestamps rather than relying on staying alive.
+- Machine import:
+  - De-duplicate by machineId, shotId and startedAt (ids restart after a reflash).
+  - Warn when the machine's history is close to rotating out un-imported shots.
+  - Handle firmware or format versions the parser doesn't support with a clear message, never a crash.
+- Remote brew start ships last, behind an explicit on-screen confirmation and a safety notice. Read-only comes first.
+- App Review needs a demo mode with sample shots, because reviewers have no GaggiMate.
+- Crypto on mobile uses platform-provided standard algorithms (AES-GCM, PBKDF2 and HKDF via the OS or a vetted WebCrypto implementation). Nothing custom.
+
+**Purchases**
+- See BUSINESS.md. The brew gate fails open: a store outage, a network failure or a verification error never blocks a brew.
+
+**Accounts**
+- Email verification at sign-up.
+- Account deletion is available in the app while signed in.
+- Deletion with a forgotten password: an emailed confirmation link starts the deletion, followed by a 7-day cancellable cooling-off period. Any signed-in device can cancel it. The recovery key also proves ownership.
