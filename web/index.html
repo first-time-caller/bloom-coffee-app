@@ -17,6 +17,7 @@
   --accent-soft:#DDE8E4;
   --on-ink:#F1F3EF;
   --warn:#9A5B13;
+  --s-p:#2D5C57; --s-f:#2F66A8; --s-w:#8A5A2B; --s-t:#A24A5B; /* shot graph series: pressure, flow, weight, temperature */
   --font-display:'Outfit',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
   --font-mono:'DM Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   --ease:cubic-bezier(.22,.7,.2,1);
@@ -25,12 +26,14 @@
   :root:not([data-theme="light"]){
     --bg:#111412; --ink:#E8ECE6; --ink2:#98A199; --line:#272D29;
     --accent:#88BFB4; --accent-soft:#1B2D29; --on-ink:#111412; --warn:#E0A458;
+    --s-p:#88BFB4; --s-f:#7FAEE0; --s-w:#D3A06A; --s-t:#DE8FA0;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#111412; --ink:#E8ECE6; --ink2:#98A199; --line:#272D29;
   --accent:#88BFB4; --accent-soft:#1B2D29; --on-ink:#111412; --warn:#E0A458;
+  --s-p:#88BFB4; --s-f:#7FAEE0; --s-w:#D3A06A; --s-t:#DE8FA0;
   color-scheme:dark;
 }
 
@@ -251,7 +254,7 @@ h1{font-weight:300;font-size:clamp(30px,9vw,38px);line-height:1.1;letter-spacing
 .hist-stats{margin:-14px 0 18px;min-height:18px;font-size:12px;letter-spacing:.04em;color:var(--ink2)}
 .hist-tools{display:flex;align-items:center;gap:16px;margin-bottom:8px}
 .hist-tools .search{flex:1;min-width:0;font-size:18px}
-.hist-tools .link{margin-left:auto;white-space:nowrap}
+.hist-tools .link{white-space:nowrap}.hist-tools .search + .link{margin-left:auto}
 .h-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0}
 .h-rate{font:400 11px var(--font-mono);letter-spacing:.14em;color:var(--accent)}
 .h-edit{display:flex;flex-direction:column;gap:6px}
@@ -364,6 +367,29 @@ h1{font-weight:300;font-size:clamp(30px,9vw,38px);line-height:1.1;letter-spacing
 .bag-chart .ln{fill:none;stroke:var(--ink2);stroke-width:1;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .bag-chart .pt{fill:var(--accent);stroke:var(--bg);stroke-width:1.5}
 .bag-chart .best{fill:none;stroke:var(--accent);stroke-width:1}
+/* espresso: shot graph (same look as .bag-chart), shot form, history labels */
+.shot-chart{display:block;width:100%;height:auto;overflow:visible}
+.shot-chart text{font:400 10px var(--font-mono);fill:var(--ink2);font-variant-numeric:tabular-nums}
+.shot-chart .msg{font-size:11px}
+.shot-chart .gl{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}
+.shot-chart .ln,.shot-legend .ln{fill:none;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.ln.s-p{stroke:var(--s-p);stroke-width:2}.ln.s-f{stroke:var(--s-f);stroke-width:1.5}
+.ln.s-w{stroke:var(--s-w);stroke-width:1.5;stroke-dasharray:6 3}.ln.s-t{stroke:var(--s-t);stroke-width:1.5;stroke-dasharray:2 3}
+.shot-legend{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:2px 16px;font:400 11px var(--font-mono);color:var(--ink2)}
+.shot-legend li{display:flex;align-items:center;gap:6px;min-height:22px}
+.shot-legend svg{width:18px;height:6px;flex:none;overflow:visible}
+.shot-legend li.off{opacity:.7}
+.shot-ratio{margin:0;font:400 13px var(--font-mono);color:var(--ink2)}
+.shot-ratio b{font-weight:500;color:var(--ink)}
+.shot-field-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 16px}
+.shot-field-grid > *{min-width:0}
+.shot-sel{width:100%;min-height:48px;background:transparent;color:var(--ink);border:0;border-bottom:1px solid var(--line);border-radius:0;padding:8px 0 10px;font:300 20px var(--font-display)}
+.shot-sel:focus{outline:none;border-bottom-color:var(--accent)}
+.shot-chart-box{display:flex;flex-direction:column}
+.h-kind{align-self:center;font:400 10px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:2px}
+.hist-kind{margin-bottom:8px}
+.hist-kind .chip{min-height:36px;padding:4px 13px;font-size:14px}
+@media (max-width:360px){ .shot-field-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
 /* ---------- settings, gear ---------- */
 :root:not(.pro) .pro-only{display:none!important}
 .seg.seg2{grid-template-columns:repeat(2,1fr)}
@@ -649,6 +675,7 @@ body{overflow-x:clip}
           <button class="link" id="todayChangeBag" type="button">Brew a different bag</button>
           <button class="link" id="todaySeeShelf" type="button">Shelf</button>
           <button class="link" id="todayNewBag" type="button">New bag</button>
+          <button class="link" id="todayShot" type="button">Log a shot</button>
         </div>
       </div>
     </section>
@@ -976,9 +1003,11 @@ body{overflow-x:clip}
         <button type="button" role="radio" data-v="list" aria-checked="true">All brews</button>
         <button type="button" role="radio" data-v="coffee" aria-checked="false">By coffee</button>
       </div>
+      <div class="chips hist-kind" id="histKind" role="radiogroup" aria-label="Show" hidden></div>
       <div class="hist-tools">
         <input class="input search" id="histSearch" type="search" placeholder="Search coffees" aria-label="Search coffees" autocomplete="off" enterkeyhint="search" hidden>
         <button class="link" id="logBtn" type="button">Log a coffee</button>
+        <button class="link" id="shotBtn" type="button">Log a shot</button>
       </div>
       <ul class="hist" id="histList"></ul>
       <ul class="hist bag-list" id="histCoffee" aria-label="Brews grouped by coffee" hidden></ul>
@@ -1026,6 +1055,61 @@ body{overflow-x:clip}
       </div>
     </section>
 
+
+    <section class="stage" data-stage="shot" data-pos="after" aria-labelledby="h-shot">
+      <h1 id="h-shot" tabindex="-1">Log a shot</h1>
+      <p class="lede" id="shotLede">Dose, yield and time. The ratio works itself out.</p>
+      <div class="fields">
+        <div class="field" id="shotBagField">
+          <span class="label" id="shotBagLabel">Coffee</span>
+          <div class="chips" id="shotBags" role="radiogroup" aria-labelledby="shotBagLabel"></div>
+          <input class="input sm" id="shotCoffee" type="text" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="Coffee, roaster or origin" aria-label="Coffee name" hidden>
+        </div>
+        <div class="shot-field-grid">
+          <div class="field"><label class="label" for="shotDose">Dose <span class="opt">g</span></label><input class="input sm" id="shotDose" type="number" inputmode="decimal" min="0" max="60" step="0.1" placeholder="18"></div>
+          <div class="field"><label class="label" for="shotYield">Yield <span class="opt">g</span></label><input class="input sm" id="shotYield" type="number" inputmode="decimal" min="0" max="200" step="0.1" placeholder="36"></div>
+          <div class="field"><label class="label" for="shotTime">Time <span class="opt">s</span></label><input class="input sm" id="shotTime" type="number" inputmode="decimal" min="0" max="180" step="0.1" placeholder="28"></div>
+        </div>
+        <div class="field">
+          <p class="shot-ratio" id="shotRatio" role="status" aria-live="polite"></p>
+          <span class="label" id="shotAimLabel">Aim for</span>
+          <div class="chips" id="shotAim" role="radiogroup" aria-labelledby="shotAimLabel"></div>
+        </div>
+        <div class="field" id="shotGrinderField" hidden>
+          <label class="label" for="shotGrinder">Grinder</label>
+          <select class="shot-sel" id="shotGrinder"></select>
+        </div>
+        <div class="field">
+          <label class="label" for="shotGrind">Grind setting <span class="opt">optional</span></label>
+          <input class="input sm" id="shotGrind" type="text" maxlength="16" autocomplete="off" placeholder="e.g. 12">
+        </div>
+        <div class="field">
+          <label class="label" for="shotProfile">Profile <span class="opt">optional</span></label>
+          <input class="input sm" id="shotProfile" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Classic 9 bar">
+        </div>
+        <div class="two pro-only">
+          <div class="field"><label class="label" for="shotPeak">Peak pressure <span class="opt">bar</span></label><input class="input sm" id="shotPeak" type="number" inputmode="decimal" min="0" max="20" step="0.1"></div>
+          <div class="field"><label class="label" for="shotTemp">Water temp <span class="opt">°C</span></label><input class="input sm" id="shotTemp" type="number" inputmode="decimal" min="50" max="110" step="0.1"></div>
+        </div>
+        <div class="field" id="shotChartField" hidden>
+          <span class="label">Shot graph</span>
+          <div class="shot-chart-box" id="shotChart"></div>
+        </div>
+        <div class="field">
+          <span class="label" id="shotRateLabel">Rating</span>
+          <div class="rating" id="shotRating" role="radiogroup" aria-labelledby="shotRateLabel"></div>
+        </div>
+        <div class="field">
+          <span class="label" id="shotTasteLabel">How did it taste?</span>
+          <div class="chips" id="shotTaste" role="group" aria-labelledby="shotTasteLabel"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="shotNote">Notes <span class="opt">optional</span></label>
+          <textarea class="note-in" id="shotNote" rows="3" maxlength="600" placeholder="Channeling, puck prep, what stood out"></textarea>
+        </div>
+        <p class="sub" id="shotMsg" role="status" aria-live="polite"></p>
+      </div>
+    </section>
 
     <section class="stage" data-stage="settings" data-pos="after" aria-labelledby="h-settings">
       <h1 id="h-settings" tabindex="-1">Settings</h1>
@@ -1099,6 +1183,14 @@ body{overflow-x:clip}
         <input class="input sm" id="kettleIn" type="number" inputmode="numeric" step="1">
         <p class="caption tight">If your kettle can&rsquo;t reach boiling (at altitude, say), recipes stay at or below this.</p>
       </div>
+      <div class="set-group pro-only" id="devGroup">
+        <span class="label">Espresso</span>
+        <div class="set-acts">
+          <button class="btn-small" id="sampleShots" type="button">Load sample espresso shots</button>
+          <span class="sub" id="sampleMsg" role="status"></span>
+        </div>
+        <p class="caption tight">Adds three example shots from a GaggiMate (one without a scale) to your history, so you can try the graphs. Safe to run twice.</p>
+      </div>
       <div class="set-group" id="dataGroup">
         <p class="label" id="dataLabel">Your data</p>
         <div class="set-acts">
@@ -1128,6 +1220,8 @@ body{overflow-x:clip}
   </div>
 </div>
 
+<script src="vendor/bloom-slog.js" onerror="this.remove()"></script>
+<script src="sample-shots.js" onerror="this.remove()"></script>
 <script>
 (function () {
 'use strict';
@@ -1518,9 +1612,9 @@ function coffeeTitle(rec){
 }
 
 /* ---------- record sanitisers: one malformed brew or bag must never break boot ---------- */
-const REC_STR = ['variety','roaster','name','labelNotes','process','grade','altitude','roastDateText','roastDate','roast','source','boughtFrom','taste','note','tastedText','coolNote','buyAgain','grinderId','grinderName','grindUnit','grindSetting','waterId','waterName','method','bagId','updatedAt','roasterRecipe'];
+const REC_STR = ['kind','grind','profile','variety','roaster','name','labelNotes','process','grade','altitude','roastDateText','roastDate','roast','source','boughtFrom','taste','note','tastedText','coolNote','buyAgain','grinderId','grinderName','grindUnit','grindSetting','waterId','waterName','method','bagId','updatedAt','roasterRecipe'];
 const REC_ARR = ['notes','varieties','components','tasted','pourPlan','pourTimes'];
-const REC_NUM = ['dose','water','yieldMl','temp','cup','rating','drainSec','totalSec','weightG','restDays','useWithinDays','bloomSec','waterGH','waterKH','ice','totalWater','schema'];
+const REC_NUM = ['dose','water','yieldMl','temp','cup','rating','drainSec','totalSec','weightG','restDays','useWithinDays','bloomSec','waterGH','waterKH','ice','totalWater','schema','doseG','yieldG','timeS','ratio','peakPressureBar','avgTempC'];
 const REC_BOOL = ['decaf','iced'];
 const coerceNum = v => { const n = Number(v); return v != null && v !== '' && typeof v !== 'boolean' && isFinite(n) ? n : null; };
 const coerceStr = v => v == null ? '' : typeof v === 'string' ? v : (typeof v === 'number' || typeof v === 'boolean') ? String(v) : '';
@@ -1536,7 +1630,19 @@ function cleanRecord(r){
   REC_NUM.forEach(k => { if (k in o) o[k] = coerceNum(o[k]); });
   REC_BOOL.forEach(k => { if (k in o) o[k] = o[k] === true; });
   o.rating = clamp(Math.round(o.rating || 0), 0, 5);
+  if (o.kind === 'espresso') cleanEspresso(o);
   return o;
+}
+/* espresso fields (contract EspressoFields): numbers coerced above; curve and machine checked here. Old records have none of this and pass through. */
+function cleanEspresso(o){
+  if (o.ratio == null) o.ratio = o.doseG > 0 && o.yieldG > 0 ? Math.round(o.yieldG / o.doseG * 100) / 100 : null;
+  ['doseG','yieldG','timeS'].forEach(k => { if (!(k in o)) o[k] = null; });
+  if ('curve' in o) { const c = cleanCurve(o.curve); if (c) o.curve = c; else delete o.curve; }
+  if ('machine' in o) {
+    const m = o.machine;
+    if (m && typeof m === 'object' && !Array.isArray(m) && m.machineId != null && isFinite(Number(m.shotId))) o.machine = { machineId:coerceStr(m.machineId), shotId:Number(m.shotId), profileName:coerceStr(m.profileName) };
+    else delete o.machine;
+  }
 }
 const BAG_STR = ['roaster','name','process','grade','altitude','labelNotes','roast','roastDate','roastDateText','restUntil','openedOn','frozenOn','thawedOn','source','roasterRecipe','status','legacyKey','createdAt','updatedAt','lastBrewAt','finishedAt'];
 const BAG_ARR = ['varieties','components','notes'];
@@ -1695,7 +1801,7 @@ const store = {
 };
 
 /* ---------- stage navigation ---------- */
-const ORDER = ['welcome','today','shelf','coffee','method','yield','recipe','brew','done','history','log','settings'];
+const ORDER = ['welcome','today','shelf','coffee','method','yield','recipe','brew','done','history','log','shot','settings'];
 const PROGRESS = { coffee:1, method:2, yield:3, recipe:4, brew:5, done:5 };
 const ACTIONS = {
   welcome: { back:['Skip', null], next:'Continue', to:null },
@@ -1709,6 +1815,7 @@ const ACTIONS = {
   done:    { back:['History','history'], next:'Back to today', to:'today' },
   history: { back:null, next:'Close', to:null },
   log:     { back:['Cancel','history'], next:'Save', to:null },
+  shot:    { back:['Cancel','history'], next:'Save shot', to:null },
   settings:{ back:null, next:'Done', to:null }
 };
 const stages = $$('.stage');
@@ -1759,6 +1866,8 @@ function go(name){
   if (name === 'brew') setupBrew();
   if (name === 'history') { const f = document.activeElement; if (f && f.tagName === 'TEXTAREA' && f.blur) f.blur(); renderHistory(); }
   if (name === 'log' && prev !== 'log') resetLog();
+  if (name === 'shot' && prev !== 'shot') { if (!SH.keep) { SH.from = prev; resetShot(); } SH.keep = false; }
+  if (['today','coffee'].includes(name)) S.pickEspresso = false;
   if (name === 'settings') renderSettings();
   if (name === 'today') renderToday();
   if (name === 'coffee') $('#h-coffee').textContent = S.editingBagId ? 'Edit bag' : S.bagId ? 'Your coffee' : 'New bag';
@@ -1781,6 +1890,8 @@ nextBtn.addEventListener('click', () => {
   const a = ACTIONS[S.stage];
   if (S.stage === 'welcome') { commitName(); return; }
   if (S.stage === 'log') { saveLog(); return; }
+  if (S.stage === 'shot') { saveShot(); return; }
+  if (S.stage === 'method' && S.pickEspresso) { S.pickEspresso = false; SH.from = 'method'; go('shot'); return; }
   if (S.stage === 'history' || S.stage === 'settings' || S.stage === 'shelf') { go(S.returnTo && S.returnTo !== 'welcome' ? S.returnTo : 'today'); return; }
   if (S.stage === 'done') { go('today'); return; }
   if (S.stage === 'coffee') { const editing = !!S.editingBagId; commitBag(); if (editing) { go('shelf'); S.editingBagId = ''; } else go('method'); return; }
@@ -1791,6 +1902,7 @@ function backAction(){
   if (S.stage === 'welcome') { if (S.nameSet) go(S.nameFrom || 'today'); else { S.nameSet = true; LS.set('bloom.name', { name:S.name, set:true }); go('today'); } return; }
   if (S.stage === 'brew') { arm(backBtn, 'Tap again to cancel', () => { cancelBrew(); go(S.brewFrom === 'today' ? 'today' : 'recipe'); }); return; }
   if (S.stage === 'coffee' && S.editingBagId) { go('shelf'); S.editingBagId = ''; return; }
+  if (S.stage === 'shot') { go(SH.from && SH.from !== 'shot' ? SH.from : 'history'); return; }
   if (S.stage === 'recipe' && S.brewFrom === 'todayAdjust') { go('today'); return; }
   if (a.back && a.back[1]) go(a.back[1]);
 }
@@ -2295,17 +2407,24 @@ function renderMethods(){
   ids.forEach(id => {
     const m = METHODS[id], r = recompute(id);
     const b = mk('button','row');
-    b.type = 'button'; b.setAttribute('role','radio'); b.setAttribute('aria-checked', String(id === S.method));
+    b.type = 'button'; b.setAttribute('role','radio'); b.setAttribute('aria-checked', String(id === S.method && !S.pickEspresso));
     const left = mk('span');
     left.append(mk('span','nm',m.name), mk('span','bl',m.blurb));
     b.append(left, mk('span','mt', ratioText(r.ratio)+' · '+fmtTime(r.totalSec)), mk('span','dot'));
     b.addEventListener('click', () => {
-      S.method = id; LS.set('bloom.method', id);
+      S.method = id; S.pickEspresso = false; LS.set('bloom.method', id);
       $$('#methodRows .row').forEach(x => x.setAttribute('aria-checked','false'));
       b.setAttribute('aria-checked','true');
     });
     wrap.append(b);
   });
+  /* espresso is not a recipe Bloom works out: picking it carries on to the shot log instead of the yield screen */
+  const eb = mk('button','row'), el = mk('span');
+  eb.type = 'button'; eb.setAttribute('role','radio'); eb.setAttribute('aria-checked', String(!!S.pickEspresso));
+  el.append(mk('span','nm','Espresso'), mk('span','bl','Log a shot: dose, yield, time and graph'));
+  eb.append(el, mk('span','mt','1:2'), mk('span','dot'));
+  eb.addEventListener('click', () => { S.pickEspresso = true; $$('#methodRows .row').forEach(x => x.setAttribute('aria-checked','false')); eb.setAttribute('aria-checked','true'); });
+  wrap.append(eb);
 }
 
 /* ---------- stage 3: yield ---------- */
@@ -3283,7 +3402,8 @@ function reviewText(rec){
   const t = [(rec.tasted || []).join(', '), rec.tastedText].filter(Boolean).join('. ');
   if (t) L.push('- What I tasted: '+t);
   if (rec.coolNote) L.push('- As it cooled: '+rec.coolNote);
-  if (rec.dose != null) {
+  if (rec.kind === 'espresso') L.push(espressoLine(rec));
+  else if (rec.dose != null) {
     const allW = rec.iced && rec.totalWater ? rec.totalWater : rec.water;
     const ratio = allW && rec.dose ? ' (1:'+(Math.round(allW/rec.dose*10)/10)+')' : '';
     const plan = Array.isArray(rec.pourPlan) && rec.pourPlan.length ? (rec.bloomSec ? rec.pourPlan[0]+' g bloom for '+rec.bloomSec+' s, then '+rec.pourPlan.slice(1).join('/')+' g' : rec.pourPlan.join('/')+' g') : '';
@@ -3356,6 +3476,274 @@ function saveLog(){
   go('history');
 }
 
+/* ---------- espresso: manual shot log, shot graph, machine import ---------- */
+const espNum = (v, lo, hi) => { if (v === '' || v == null || typeof v === 'boolean') return null; const n = Number(v); return isFinite(n) && n >= lo && n <= hi ? n : null; };
+const ratioOf = (d, y) => d > 0 && y > 0 ? Math.round(y / d * 100) / 100 : null;
+const fmtG = v => v == null ? '–' : (Math.round(v * 10) / 10) + ' g';
+const AIMS = [1.5, 2, 2.5, 3];
+/* the shot form's state; editId set = changing a saved shot, curve/machine ride along untouched */
+const SH = { bagId:'', coffee:'', dose:'', yld:'', time:'', grinderId:'', grind:'', profile:'', peak:'', temp:'', rating:0, taste:'', note:'', curve:null, machine:null, createdAt:'', editId:'', from:'history', keep:false };
+const shotRate = buildRating($('#shotRating'), n => { SH.rating = SH.rating === n ? 0 : n; shotRate.paint(SH.rating); });
+TASTES.forEach(t => {
+  const b = mk('button','chip',t); b.type = 'button'; b.dataset.v = t; b.setAttribute('aria-pressed','false');
+  b.addEventListener('click', () => { SH.taste = SH.taste === t ? '' : t; paintShotTaste(); });
+  $('#shotTaste').append(b);
+});
+function paintShotTaste(){ $$('#shotTaste .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === SH.taste))); shotRate.paint(SH.rating); }
+function paintShotRatio(){
+  const d = espNum(SH.dose, 0, 200), y = espNum(SH.yld, 0, 500), r = ratioOf(d, y), el = $('#shotRatio');
+  el.replaceChildren(); el.append('Ratio ', mk('b','', r ? ratioText(r) : '–'), d && y ? '  ·  '+fmtG(d)+' → '+fmtG(y) : '');
+  radioChips($('#shotAim'), AIMS.map(a => [a, '1:'+a]), () => (r && AIMS.find(a => Math.abs(a - r) < .03)) || 0, v => {
+    if (!d) { $('#shotMsg').textContent = 'Enter the dose first, then pick a ratio.'; return; }
+    $('#shotMsg').textContent = '';
+    SH.yld = String(Math.round(d * v * 10) / 10); $('#shotYield').value = SH.yld; paintShotRatio();
+  });
+}
+function paintShotCoffee(){
+  const bags = shelfOrder(), cur = SH.bagId ? findBag(SH.bagId) : null;
+  if (cur && !bags.includes(cur)) bags.push(cur);
+  const box = $('#shotBags');
+  box.hidden = !bags.length;
+  radioChips(box, bags.map(b => [b.id, bagTitle(b)]).concat([['', 'Other']]), () => SH.bagId, v => { SH.bagId = v; paintShotCoffee(); });
+  $('#shotCoffee').hidden = !!SH.bagId;
+}
+function paintShot(){
+  paintShotCoffee();
+  $('#shotCoffee').value = SH.coffee; $('#shotDose').value = SH.dose; $('#shotYield').value = SH.yld; $('#shotTime').value = SH.time;
+  $('#shotGrind').value = SH.grind; $('#shotProfile').value = SH.profile; $('#shotPeak').value = SH.peak; $('#shotTemp').value = SH.temp; $('#shotNote').value = SH.note;
+  const gf = $('#shotGrinderField'); gf.hidden = !SET.grinders.length;
+  if (SET.grinders.length) { if (!findGrinder(SH.grinderId)) SH.grinderId = defGrinder().id; fillSelect($('#shotGrinder'), SET.grinders, SH.grinderId); }
+  else SH.grinderId = '';
+  $('#h-shot').textContent = SH.editId ? 'Edit shot' : 'Log a shot';
+  $('#shotChartField').hidden = !SH.curve;
+  if (SH.curve) renderShotChart($('#shotChart'), SH.curve); else $('#shotChart').replaceChildren();
+  $('#shotMsg').textContent = '';
+  paintShotRatio(); paintShotTaste();
+}
+function resetShot(){
+  const last = S.history.filter(r => r.kind === 'espresso').sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+  const bag = SH.from === 'method' && findBag(S.bagId) ? findBag(S.bagId) : currentBag();
+  const gid = last && findGrinder(last.grinderId) ? last.grinderId : (defGrinder() || {}).id || '';
+  Object.assign(SH, { bagId:bag ? bag.id : '', coffee:'', dose:last && last.doseG ? String(last.doseG) : '', yld:'', time:'', grinderId:gid,
+    grind:last && last.grinderId === gid && last.grindSetting ? last.grindSetting : '', profile:last && last.profile ? last.profile : '', peak:'', temp:'',
+    rating:0, taste:'', note:'', curve:null, machine:null, createdAt:'', editId:'' });
+  paintShot();
+}
+[['shotCoffee','coffee'],['shotDose','dose'],['shotYield','yld'],['shotTime','time'],['shotGrind','grind'],['shotProfile','profile'],['shotPeak','peak'],['shotTemp','temp'],['shotNote','note']].forEach(p => {
+  $('#'+p[0]).addEventListener('input', e => { SH[p[1]] = e.target.value; if (p[1] === 'dose' || p[1] === 'yld') paintShotRatio(); });
+});
+$('#shotGrinder').addEventListener('change', e => { SH.grinderId = e.target.value; });
+/* an espresso history record: Bloom's common fields plus the contract's EspressoFields. f holds raw form/import values; base is the record being edited. */
+function espressoRecord(f, base){
+  const dose = espNum(f.doseG, 0, 200), yld = espNum(f.yieldG, 0, 500), g = findGrinder(f.grinderId), grind = String(f.grind == null ? '' : f.grind).trim();
+  const rec = Object.assign({}, base || { id:newId(), createdAt:f.createdAt || new Date().toISOString() }, {
+    source:'log', kind:'espresso', method:'Espresso', doseG:dose, yieldG:yld, timeS:espNum(f.timeS, 0, 600), ratio:ratioOf(dose, yld),
+    grind:grind, grinderId:g ? g.id : '', grinderName:g ? g.name : '', grindUnit:g ? g.unit : '', grindSetting:grind,
+    profile:String(f.profile || '').trim(), peakPressureBar:espNum(f.peakPressureBar, 0, 30), avgTempC:espNum(f.avgTempC, 0, 150),
+    rating:clamp(Math.round(Number(f.rating) || 0), 0, 5), taste:f.taste || '', note:String(f.note || '').trim() });
+  const bag = f.bagId ? findBag(f.bagId) : null;
+  if (bag) Object.assign(rec, { bagId:bag.id, variety:(bag.varieties || []).join(', '), varieties:clone(bag.varieties || []), roaster:bag.roaster || '', name:bag.name || '',
+    roast:bag.roast || '', roastDate:bag.roastDate || '', process:bag.process || '', components:clone(bag.components || []) });
+  else Object.assign(rec, { bagId:'', name:String(f.coffee || '').trim(), roaster:'', variety:'', varieties:[], components:[] });
+  if (f.curve) rec.curve = f.curve;
+  if (f.machine) rec.machine = f.machine;
+  return rec;
+}
+function saveShot(){
+  const d = espNum(SH.dose, 0, 200), y = espNum(SH.yld, 0, 500), t = espNum(SH.time, 0, 600), msg = $('#shotMsg');
+  const bad = [['Dose', SH.dose, d], ['Yield', SH.yld, y], ['Time', SH.time, t]].find(x => String(x[1]).trim() !== '' && x[2] == null);
+  if (bad) { msg.textContent = bad[0] + ' doesn’t look right.'; return; }
+  if (!(d > 0) && !(y > 0) && !(t > 0) && !SH.curve) { msg.textContent = 'Add a dose, yield or time first.'; return; }
+  const old = SH.editId ? S.history.find(r => r.id === SH.editId) : null;
+  store.save(espressoRecord({ bagId:SH.bagId, coffee:SH.coffee, doseG:SH.dose, yieldG:SH.yld, timeS:SH.time, grinderId:SH.grinderId, grind:SH.grind, profile:SH.profile,
+    peakPressureBar:SH.peak, avgTempC:SH.temp, rating:SH.rating, taste:SH.taste, note:SH.note, curve:SH.curve, machine:SH.machine, createdAt:SH.createdAt }, old));
+  HQ.q = ''; $('#histSearch').value = '';
+  go('history');
+}
+/* open the form on a saved shot (edit) or as a starting point for the next one (again) */
+function openShotForm(rec, again){
+  SH.from = S.stage; resetShot();
+  Object.assign(SH, { bagId:findBag(rec.bagId) ? rec.bagId : '', coffee:findBag(rec.bagId) ? '' : (rec.name || ''), dose:rec.doseG != null ? String(rec.doseG) : '', yld:rec.yieldG != null ? String(rec.yieldG) : '',
+    grinderId:findGrinder(rec.grinderId) ? rec.grinderId : SH.grinderId, grind:rec.grindSetting || rec.grind || '', profile:rec.profile || '' });
+  if (!again) Object.assign(SH, { time:rec.timeS != null ? String(rec.timeS) : '', peak:rec.peakPressureBar != null ? String(rec.peakPressureBar) : '', temp:rec.avgTempC != null ? String(rec.avgTempC) : '',
+    rating:rec.rating || 0, taste:rec.taste || '', note:rec.note || '', curve:rec.curve || null, machine:rec.machine || null, createdAt:rec.createdAt, editId:rec.id });
+  paintShot(); SH.keep = true; go('shot');
+}
+$('#shotBtn').addEventListener('click', () => go('shot'));
+$('#todayShot').addEventListener('click', () => go('shot'));
+
+/* ----- the shot graph: pressure + flow (left axis), weight (right axis), temperature in a strip below. Same look as .bag-chart. ----- */
+const SHOT_SER = [['p','s-p','Pressure','bar'], ['f','s-f','Flow','ml/s'], ['w','s-w','Weight','g'], ['c','s-t','Temperature','°C']];
+function cleanCurve(c){
+  if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
+  const stepMs = Number(c.stepMs);
+  if (!(stepMs > 0) || !isFinite(stepMs)) return null;
+  const o = { stepMs:stepMs };
+  ['p','f','w','c'].forEach(k => { o[k] = (Array.isArray(c[k]) ? c[k] : []).slice(0, 3000).map(v => v == null || v === '' || typeof v === 'boolean' || !isFinite(Number(v)) ? null : Number(v)); });
+  return o;
+}
+function renderShotChart(box, curve){
+  box.replaceChildren();
+  const c = cleanCurve(curve), val = v => typeof v === 'number' && isFinite(v);
+  const has = k => !!c && c[k].some(val);
+  const n = c ? Math.max(c.p.length, c.f.length, c.w.length, c.c.length) : 0, W = 320;
+  if (n < 2 || !SHOT_SER.some(s => has(s[0]))) {
+    const e = bagSvg('svg', { class:'shot-chart', viewBox:'0 0 '+W+' 70', role:'img', 'aria-label':'No shot curve recorded' });
+    e.append(bagSvg('title', {}, 'No shot curve recorded'), bagSvg('text', { class:'msg', x:W / 2, y:38, 'text-anchor':'middle' }, 'No curve recorded for this shot'));
+    box.append(e); return e;
+  }
+  const L = 28, R = W - 30, T = 18, Bm = T + 104, hasT = has('c'), Ts = Bm + 20, Te = Ts + 26, H = (hasT ? Te : Bm) + 22;
+  const mx = a => a.reduce((m, v) => val(v) && v > m ? v : m, -Infinity), mn = a => a.reduce((m, v) => val(v) && v < m ? v : m, Infinity);
+  const dur = (n - 1) * c.stepMs / 1000;
+  const xs = i => L + i / (n - 1) * (R - L);
+  const top = Math.max(6, Math.ceil(Math.max(has('p') ? mx(c.p) : 0, has('f') ? mx(c.f) : 0) / 2) * 2);
+  const wTop = has('w') ? Math.max(20, Math.ceil(mx(c.w) / 10) * 10) : 0;
+  const yL = v => Bm - Math.min(v, top) / top * (Bm - T), yW = v => Bm - Math.min(v, wTop) / wTop * (Bm - T);
+  let tlo = hasT ? mn(c.c) : 0, thi = hasT ? mx(c.c) : 1;
+  if (thi - tlo < 4) { const m = (tlo + thi) / 2; tlo = m - 2; thi = m + 2; }
+  const yT = v => Te - (v - tlo) / (thi - tlo) * (Te - Ts);
+  const path = (a, y) => { let d = '', pen = false; a.forEach((v, i) => { if (!val(v)) { pen = false; return; } d += (pen ? 'L' : 'M') + xs(i).toFixed(1) + ',' + y(v).toFixed(1); pen = true; }); return d; };
+  /* words for the screen reader, and the legend */
+  const rd = v => String(Math.round(v * 10) / 10);
+  const last = a => { for (let i = a.length - 1; i >= 0; i--) if (val(a[i])) return a[i]; return null; };
+  const facts = { p:has('p') && ['Pressure peaked at ' + rd(mx(c.p)) + ' bar', 'peak ' + rd(mx(c.p)) + ' bar'],
+    f:has('f') && ['Flow peaked at ' + rd(mx(c.f)) + ' ml/s', 'peak ' + rd(mx(c.f)) + ' ml/s'],
+    w:has('w') && ['Weight reached ' + rd(last(c.w)) + ' g', rd(last(c.w)) + ' g'],
+    c:hasT && (() => { const v = c.c.filter(val), a = v.reduce((s, x) => s + x, 0) / v.length; return ['Temperature averaged ' + rd(a) + ' °C', 'avg ' + rd(a) + ' °C']; })() };
+  const summary = 'Shot graph over ' + rd(dur) + ' seconds. ' + SHOT_SER.map(s => facts[s[0]] ? facts[s[0]][0] + '.' : s[2] + ' not recorded.').join(' ');
+  const svg = bagSvg('svg', { class:'shot-chart', viewBox:'0 0 '+W+' '+H, role:'img', 'aria-label':summary, preserveAspectRatio:'xMidYMid meet' });
+  svg.append(bagSvg('title', {}, summary));
+  [0, .5, 1].forEach(f => {
+    const y = Bm - f * (Bm - T);
+    svg.append(bagSvg('line', { class:'gl', x1:L, x2:R, y1:y, y2:y }));
+    svg.append(bagSvg('text', { x:L - 6, y:y + 3.5, 'text-anchor':'end' }, String(Math.round(top * f * 10) / 10)));
+    if (wTop) svg.append(bagSvg('text', { x:R + 6, y:y + 3.5, style:'fill:var(--s-w)' }, String(Math.round(wTop * f))));
+  });
+  svg.append(bagSvg('text', { x:0, y:T - 8 }, 'bar · ml/s'));
+  if (wTop) svg.append(bagSvg('text', { x:R + 6, y:T - 8, style:'fill:var(--s-w)' }, 'g'));
+  if (hasT) {
+    svg.append(bagSvg('line', { class:'gl', x1:L, x2:R, y1:Ts, y2:Ts }), bagSvg('line', { class:'gl', x1:L, x2:R, y1:Te, y2:Te }));
+    svg.append(bagSvg('text', { x:L - 6, y:Ts + 3.5, 'text-anchor':'end' }, String(Math.round(thi))), bagSvg('text', { x:L - 6, y:Te + 3.5, 'text-anchor':'end' }, String(Math.round(tlo))));
+    svg.append(bagSvg('text', { x:R + 6, y:(Ts + Te) / 2 + 3.5, style:'fill:var(--s-t)' }, '°C'));
+  }
+  const step = dur <= 20 ? 5 : dur <= 60 ? 10 : 20;
+  for (let t = 0; t <= dur + 1e-6; t += step) svg.append(bagSvg('text', { x:L + t / dur * (R - L), y:H - 6, 'text-anchor':'middle' }, t + ' s'));
+  if (has('w')) svg.append(bagSvg('path', { class:'ln s-w', d:path(c.w, yW) }));
+  if (hasT) svg.append(bagSvg('path', { class:'ln s-t', d:path(c.c, yT) }));
+  if (has('f')) svg.append(bagSvg('path', { class:'ln s-f', d:path(c.f, yL) }));
+  if (has('p')) svg.append(bagSvg('path', { class:'ln s-p', d:path(c.p, yL) }));
+  const lg = mk('ul', 'shot-legend');
+  SHOT_SER.forEach(s => {
+    const li = mk('li', facts[s[0]] ? '' : 'off');
+    if (facts[s[0]]) { const k = bagSvg('svg', { viewBox:'0 0 18 6', 'aria-hidden':'true' }); k.append(bagSvg('line', { class:'ln ' + s[1], x1:0, x2:18, y1:3, y2:3 })); li.append(k); }
+    li.append(s[2] + ' · ' + (facts[s[0]] ? facts[s[0]][1] : 'not recorded'));
+    lg.append(li);
+  });
+  box.append(svg, lg);
+  return svg;
+}
+function shotCurveFallback(shot, stepMs){
+  stepMs = stepMs > 0 ? stepMs : 500;
+  const sm = Array.isArray(shot.samples) ? shot.samples : [], dur = Math.max(Number(shot.durationMs) || 0, sm.length ? sm[sm.length - 1].t : 0);
+  const n = Math.floor(dur / stepMs) + 1, out = { stepMs:stepMs, p:[], f:[], w:[], c:[] }, src = { p:'cp', f:'fl', w:'v', c:'ct' }, rnd = { p:10, f:100, w:10, c:10 };
+  let j = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i * stepMs;
+    while (j + 1 < sm.length && sm[j + 1].t <= t) j++;
+    const a = sm[j], b = sm[j + 1];
+    Object.keys(src).forEach(k => {
+      const va = a && a[src[k]], vb = b && b[src[k]];
+      let v = null;
+      if (typeof va === 'number' && isFinite(va)) { v = va; if (b && typeof vb === 'number' && b.t > a.t && t > a.t) v = va + (vb - va) * (t - a.t) / (b.t - a.t); }
+      out[k].push(v == null ? null : Math.round(v * rnd[k]) / rnd[k]);
+    });
+  }
+  return out;
+}
+
+/* ----- machine import: the native app hands a parsed contract Shot to window.Bloom.importMachineShot ----- */
+const noteNum = v => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isFinite(n) ? n : null; };
+function importMachineShot(shot, opts){
+  opts = opts || {};
+  if (!shot || typeof shot !== 'object' || !Array.isArray(shot.samples)) { try { console.warn('importMachineShot: not a Shot'); } catch (e) {} return null; }
+  const sl = window.BloomSlog, notes = opts.notes && typeof opts.notes === 'object' ? opts.notes : {}, machineId = String(opts.machineId || 'machine');
+  const prior = S.history.find(r => r.machine && r.machine.machineId === machineId && r.machine.shotId === shot.id);
+  if (prior && !opts.prefill && !opts.replace) return prior;
+  let curve = null;
+  if (sl && typeof sl.shotToCurve === 'function') { try { const x = cleanCurve(sl.shotToCurve(shot, opts.stepMs)); if (x && x.p.length > 1) curve = x; } catch (e) {} }
+  if (!curve) curve = cleanCurve(shotCurveFallback(shot, opts.stepMs));
+  let peak = null, temp = null, dur = null;
+  if (sl && typeof sl.summarizeShot === 'function') {
+    try { const s = sl.summarizeShot(shot) || {}; peak = espNum(s.peakPressureBar != null ? s.peakPressureBar : s.peakPressure, 0, 30); temp = espNum(s.avgTempC != null ? s.avgTempC : s.avgTemp, 0, 150); dur = espNum(s.timeS != null ? s.timeS : s.durationS, 0, 600); } catch (e) {}
+  }
+  const vals = k => (curve ? curve[k] : []).filter(v => typeof v === 'number');
+  if (peak == null && vals('p').length) peak = Math.max.apply(null, vals('p'));
+  if (temp == null && vals('c').length) temp = vals('c').reduce((s, v) => s + v, 0) / vals('c').length;
+  if (dur == null && shot.durationMs > 0) dur = shot.durationMs / 1000;
+  const r1 = v => v == null ? null : Math.round(v * 10) / 10;
+  const started = shot.startedAt && isFinite(new Date(shot.startedAt)) ? new Date(shot.startedAt).toISOString() : '';
+  const f = { bagId:opts.bagId || '', coffee:opts.coffee || '', doseG:opts.doseG != null ? opts.doseG : noteNum(notes.doseIn),
+    yieldG:opts.yieldG != null ? opts.yieldG : noteNum(notes.doseOut) != null ? noteNum(notes.doseOut) : typeof shot.finalWeightG === 'number' ? r1(shot.finalWeightG) : null,
+    timeS:r1(dur), grinderId:opts.grinderId || '', grind:opts.grind || '', profile:shot.profileName || '', peakPressureBar:r1(peak), avgTempC:r1(temp),
+    rating:Number(notes.rating) >= 1 && Number(notes.rating) <= 5 ? Number(notes.rating) : 0, taste:opts.taste || '', note:typeof notes.note === 'string' ? notes.note : '',
+    curve:curve, machine:{ machineId:machineId, shotId:Number(shot.id) || 0, profileName:String(shot.profileName || '') }, createdAt:started };
+  if (opts.prefill) {
+    SH.from = S.stage === 'shot' ? SH.from : S.stage; resetShot();
+    Object.assign(SH, { bagId:f.bagId || SH.bagId, coffee:f.coffee, dose:f.doseG != null ? String(f.doseG) : SH.dose, yld:f.yieldG != null ? String(f.yieldG) : '', time:f.timeS != null ? String(f.timeS) : '',
+      grind:f.grind || SH.grind, grinderId:f.grinderId || SH.grinderId, profile:f.profile, peak:f.peakPressureBar != null ? String(f.peakPressureBar) : '', temp:f.avgTempC != null ? String(f.avgTempC) : '',
+      rating:f.rating, taste:f.taste, note:f.note, curve:f.curve, machine:f.machine, createdAt:f.createdAt, editId:prior ? prior.id : '' });
+    paintShot(); SH.keep = true; go('shot');
+    return espressoRecord(f, prior || null);
+  }
+  const rec = espressoRecord(f, prior || null);
+  store.save(rec);
+  return rec;
+}
+window.Bloom = window.Bloom || {};
+window.Bloom.importMachineShot = importMachineShot;
+window.Bloom.renderShotChart = renderShotChart;
+$('#sampleShots').addEventListener('click', () => {
+  const shots = window.BLOOM_SAMPLE_SHOTS, notes = window.BLOOM_SAMPLE_NOTES || [], msg = $('#sampleMsg');
+  if (!Array.isArray(shots) || !shots.length) { msg.textContent = 'The sample shots file did not load.'; return; }
+  const before = S.history.length;
+  shots.forEach((s, i) => importMachineShot(s, { notes:notes[i], machineId:'sample' }));
+  const added = S.history.length - before;
+  msg.textContent = added ? 'Added ' + added + (added === 1 ? ' shot' : ' shots') + ' to History.' : 'Already in your history.';
+});
+
+/* ----- espresso in History ----- */
+const HK = { kind:'all' };
+function paintKind(all){
+  const box = $('#histKind'), has = all.some(r => r.kind === 'espresso');
+  if (!has) HK.kind = 'all';
+  box.hidden = !has;
+  if (has) radioChips(box, [['all','All'], ['filter','Filter'], ['espresso','Espresso']], () => HK.kind, v => { HK.kind = v; renderHistory(); });
+}
+function espressoBody(body, rec, det){
+  const grid = mk('div','h-grid');
+  [['Dose', fmtG(rec.doseG)], ['Yield', fmtG(rec.yieldG)], ['Ratio', rec.ratio ? ratioText(rec.ratio) : '–'], ['Time', rec.timeS != null ? (Math.round(rec.timeS * 10) / 10) + ' s' : '–']]
+    .concat(rec.peakPressureBar != null ? [['Peak', rec.peakPressureBar + ' bar']] : []).concat(rec.avgTempC != null ? [['Water', tempText(rec.avgTempC)]] : []).forEach(x => {
+      const c = mk('div'); c.append(mk('span','label',x[0]), mk('b','',x[1])); grid.append(c);
+    });
+  body.append(grid);
+  if (rec.curve) {
+    const cb = mk('div','shot-chart-box'), draw = () => { if (!cb.firstChild) renderShotChart(cb, rec.curve); };
+    body.append(cb);
+    if (det.open) draw();
+    det.addEventListener('toggle', () => { if (det.open) draw(); });
+  }
+}
+const espressoInfo = rec => [rec.roaster, rec.profile ? 'Profile ' + rec.profile : '', rec.grindSetting ? (rec.grinderName ? rec.grinderName + ' at ' : 'Ground at ') + fmtSetting({ unit:rec.grindUnit }, rec.grindSetting) : '', rec.machine ? 'From the machine' : 'Logged by hand'].filter(Boolean);
+function espressoLine(rec){
+  return '- Espresso: ' + [fmtG(rec.doseG) + ' in, ' + fmtG(rec.yieldG) + ' out', rec.ratio ? ratioText(rec.ratio) : '', rec.timeS != null ? Math.round(rec.timeS) + ' s' : '', rec.profile,
+    rec.grindSetting ? (rec.grinderName ? rec.grinderName + ' at ' : 'grind ') + fmtSetting({ unit:rec.grindUnit }, rec.grindSetting) : ''].filter(Boolean).join(', ');
+}
+function espressoActions(acts, rec){
+  const ed = mk('button','link','Edit shot'); ed.type = 'button'; ed.addEventListener('click', () => openShotForm(rec, false));
+  const ag = mk('button','link','Pull again'); ag.type = 'button'; ag.addEventListener('click', () => openShotForm(rec, true));
+  acts.append(ed, ag);
+}
+
 /* ---------- history ---------- */
 const HQ = { q:'', dirty:true };
 const dotsText = n => '\u25CF'.repeat(n)+'\u25CB'.repeat(5-n);
@@ -3391,10 +3779,12 @@ function renderHistory(){
   $('#histStats').textContent = n ? bits.join(' · ') : '';
   $('#histSearch').hidden = n === 0;
   const q = HQ.q.trim().toLowerCase();
-  const rows = q ? all.filter(r => [r.variety, r.roaster, r.name, r.labelNotes, r.process, methodName(r), r.taste, r.note, r.source, r.boughtFrom, r.tastedText, (r.tasted || []).join(' '), (r.notes || []).join(' '), (r.components || []).map(c => [c.country, c.place].join(' ')).join(' ')].join(' ').toLowerCase().includes(q)) : all;
+  let rows = q ? all.filter(r => [r.variety, r.roaster, r.name, r.labelNotes, r.process, methodName(r), r.taste, r.note, r.source, r.boughtFrom, r.tastedText, (r.tasted || []).join(' '), (r.notes || []).join(' '), (r.components || []).map(c => [c.country, c.place].join(' ')).join(' ')].join(' ').toLowerCase().includes(q)) : all;
   const empty = $('#histEmpty');
+  paintKind(all);
+  rows = HK.kind === 'all' ? rows : rows.filter(r => (r.kind === 'espresso') === (HK.kind === 'espresso'));
   empty.hidden = rows.length > 0;
-  empty.textContent = n === 0 ? 'No coffees yet. Brew one, or log one you had somewhere else.' : 'Nothing matches “'+HQ.q.trim()+'”.';
+  empty.textContent = n === 0 ? 'No coffees yet. Brew one, or log one you had somewhere else.' : HQ.q.trim() ? 'Nothing matches “'+HQ.q.trim()+'”.' : 'Nothing here yet.';
   list.replaceChildren();
   $('#histView').hidden = n === 0;
   if (renderBagView(rows)) { list.hidden = true; $('#historyBtn').textContent = n ? 'History · '+n : 'History'; return; }
@@ -3405,19 +3795,22 @@ function renderHistory(){
     const sum = mk('summary'), left = mk('span');
     const when = new Date(rec.createdAt).toLocaleDateString(undefined, { weekday:'short', day:'numeric', month:'short' });
     const vline = rec.name && rec.variety ? rec.variety+' · ' : '';
-    left.append(mk('span','h-name', coffeeTitle(rec) || 'Coffee'), mk('span','h-sub', vline+methodName(rec)+' · '+when));
+    const esp = rec.kind === 'espresso', hn = mk('span','h-name', coffeeTitle(rec) || (esp ? rec.profile || 'Espresso shot' : 'Coffee'));
+    if (esp) hn.append(mk('span','h-kind','Espresso'));
+    left.append(hn, mk('span','h-sub', esp ? [fmtG(rec.doseG)+' \u2192 '+fmtG(rec.yieldG), rec.ratio ? ratioText(rec.ratio) : '', rec.timeS != null ? Math.round(rec.timeS)+' s' : '', when].filter(Boolean).join(' · ') : vline+methodName(rec)+' · '+when));
     const right = mk('span','h-right');
     right.append(mk('span','h-taste', rec.taste || ''), mk('span','h-rate', rec.rating ? dotsText(rec.rating) : ''));
     sum.append(left, right);
     const body = mk('div','h-body');
-    if (rec.dose != null) {
+    if (rec.kind === 'espresso') espressoBody(body, rec, det);
+    else if (rec.dose != null) {
       const grid = mk('div','h-grid');
       [['Coffee', doseText(rec.dose)], ['Water', waterText(rec.water)], ['Temp', tempText(rec.temp)], ['Cup', rec.cup != null || rec.yieldMl != null ? waterText(rec.cup != null ? rec.cup : rec.yieldMl) : '\u2013']].concat(rec.drainSec ? [['Drain', fmtTime(rec.drainSec)]] : []).forEach(x => {
         const c = mk('div'); c.append(mk('span','label',x[0]), mk('b','',x[1])); grid.append(c);
       });
       body.append(grid);
     }
-    const info = rec.source === 'log'
+    const info = rec.kind === 'espresso' ? espressoInfo(rec) : rec.source === 'log'
       ? [rec.roaster, 'Logged by hand'].filter(Boolean)
       : [cap(rec.roast || '')+' roast', (rec.components || []).length > 1 ? 'Blend of '+rec.components.length : ((rec.components || [])[0] || {}).country, rec.process, rec.decaf ? 'Decaf' : '']
           .concat(rec.labelNotes ? ['Roaster\u2019s notes: '+rec.labelNotes] : rec.notes && rec.notes.length ? [rec.notes.join(', ')] : [])
@@ -3437,7 +3830,8 @@ function renderHistory(){
     edit.append(rl, rbox, ta);
     body.append(edit);
     const acts = mk('div','h-actions');
-    if (rec.variety || rec.name) {
+    if (rec.kind === 'espresso') espressoActions(acts, rec);
+    else if (rec.variety || rec.name) {
       const again = mk('button','link','Brew again'); again.type = 'button';
       again.addEventListener('click', () => {
         S.varieties = Array.isArray(rec.varieties) ? rec.varieties.slice() : (rec.variety ? String(rec.variety).split(/\s*,\s*/).filter(Boolean) : []);
