@@ -1,0 +1,16 @@
+name = "bloom-backend"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Create the database once, then paste the printed database_id below:
+#   npx wrangler d1 create bloom
+# Apply migrations:   npm run db:migrate:local   /   npm run db:migrate:remote
+[[d1_databases]]
+binding = "DB"
+database_name = "bloom"
+database_id = "00000000-0000-0000-0000-000000000000"   # PLACEHOLDER: replace after `wrangler d1 create bloom`
+migrations_dir = "migrations"
+
+[vars]
+# Comma-separated origins allowed by CORS (the Bloom web app). Capacitor origins are always allowed.
+ALLOWED_ORIGINS = "http://localhost:8080,http://127.0.0.1:8080"
