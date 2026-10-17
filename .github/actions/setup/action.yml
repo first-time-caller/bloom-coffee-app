@@ -11,7 +11,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v7
       with:
         node-version: 22
         cache: npm
@@ -31,7 +31,7 @@ runs:
     - name: Cache Playwright browsers
       if: inputs.browsers == 'true'
       id: pw-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.cache/ms-playwright
         key: playwright-${{ runner.os }}-${{ hashFiles('tooling/package-lock.json') }}
