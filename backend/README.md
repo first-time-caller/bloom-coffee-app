@@ -1,7 +1,7 @@
 # Bloom backend
 
 Cloudflare Workers + Hono + D1. Accounts (email + password) and a per-user document store that mirrors Bloom's
-Firestore-style paths, plus raw `.slog` shot storage. The browser adapter is `../web/bloom-sync.js`.
+Firestore-style paths, plus raw `.slog` shot storage. The client is `../packages/sync` (built to `../web/bloom-sync.js`; run `npm run build` there before the adapter tests).
 
 ## Setup
 
@@ -27,48 +27,53 @@ web app. `capacitor://localhost`, `http://localhost` and `https://localhost` are
 
 ## API
 
-All bodies are JSON unless noted. Errors: `{ "error": { "code", "message" } }` with 400 invalid JSON, 401 unauthorized /
-invalid_credentials, 404 not_found, 409 email_taken / quota_exceeded, 413 too_large, 415 unsupported_media_type,
-422 validation_failed, 429 rate_limited.
+The server is a **ciphertext store**: it never receives a password, master key, key-encryption key, data key or recovery key, and
+refuses document or shot bodies that are not encrypted envelopes. All crypto is client side (`../packages/sync/README.md` has the
+key hierarchy and formats). Bodies are JSON and strict (unknown fields, including a stray `password`, give 422). Errors:
+`{ "error": { "code", "message" } }` with 400 invalid JSON, 401 unauthorized / invalid_credentials, 404 not_found, 409 email_taken /
+conflict / quota_exceeded / legacy_account, 413 too_large, 415 unsupported_media_type, 422 validation_failed, 429 rate_limited.
 
 | Method and path | Notes |
 | --- | --- |
-| `POST /v1/auth/signup` `{email,password,name}` | 201 `{token, expiresAt, user}`. Password 8 to 200 chars. |
-| `POST /v1/auth/login` `{email,password}` | 200 `{token, expiresAt, user}` |
+| `POST /v1/auth/prelogin` `{email}` | `{alg:'pbkdf2-sha256', iterations, salt}`. Unknown emails get deterministic decoy parameters (HMAC of the email under `PRELOGIN_SECRET`, or a secret generated into `server_config`), so account existence is not revealed. |
+| `POST /v1/auth/signup` `{email,name?,authKey,kdf,wrappedDek,recoveryWrappedDek,recoveryAuth}` | 201 `{token, expiresAt, user}`. `kdf.iterations` must be at least 600,000 (`MIN_KDF_ITERATIONS` lowers it for tests only). |
+| `POST /v1/auth/login` `{email,authKey}` | 200 `{token, expiresAt, user, kdf, wrappedDek}` |
+| `GET /v1/auth/keys` | `{kdf, wrappedDek, keyVersion}` for the signed-in user (unlock, change password) |
+| `POST /v1/auth/change-password` `{currentAuthKey,newAuthKey,kdf,wrappedDek}` | 204. Verifies the current authKey, swaps credentials in one transaction, signs out every other session. |
+| `POST /v1/auth/recover` `{email,recoveryAuth}` | Step 1: returns `{recoveryWrappedDek, kdf}` if `recoveryAuth` matches. Same body plus `{authKey,kdf,wrappedDek}` is step 2: replaces the credentials, revokes all sessions, returns a new session like login. |
 | `POST /v1/auth/logout` | 204, revokes this token |
 | `GET /v1/me` | `{id,email,name,createdAt}` |
-| `GET /v1/sync?since=<seq>&limit=<1..500>&collection=<name>` | Changes after `seq`, ordered by seq: `{docs:[{collection,id,data,deleted,updatedAt,seq}], cursor, hasMore}`. Pass `cursor` next time; loop while `hasMore`. `since=0` omits tombstones. |
+| `GET /v1/sync?since=<seq>&limit=<1..500>&collection=<name>` | Changes after `seq`, ordered by seq: `{docs:[{collection,id,data,deleted,updatedAt,seq}], cursor, hasMore}`; `data` is the encrypted envelope. `since=0` omits tombstones. |
 | `GET /v1/docs/:collection/:id` | `{collection,id,data,updatedAt,seq}` or 404 |
-| `PUT /v1/docs/:collection/:id` | Replace or create. Body is a JSON object, at most 256 KB. |
-| `PATCH /v1/docs/:collection/:id` | Shallow merge of top-level keys. 404 if the doc does not exist. |
-| `DELETE /v1/docs/:collection/:id` | Leaves a tombstone. Idempotent, 204. |
-| `PUT /v1/shots/:machineId/:shotId` | Body: raw bytes, `Content-Type: application/octet-stream`, at most 1 MB. Optional `X-Shot-Meta` header: JSON object (at most 8 KB) with a parsed summary. Idempotent upsert; 201 on create, 200 on replace. |
-| `GET /v1/shots?machineId=&limit=&before=` | Metadata only, newest first. |
-| `GET /v1/shots/:machineId/:shotId` | Raw bytes (meta echoed in `X-Shot-Meta`). |
+| `PUT /v1/docs/:collection/:id[?baseSeq=N]` | Body must be an envelope `{v:1,iv,ct}` (256 KB max). Without `baseSeq`: last write wins. With it: compare-and-swap, 409 `conflict` unless the live doc's seq is still N (0 = must not exist; a tombstone counts as not existing). |
+| `DELETE /v1/docs/:collection/:id` | Leaves a server tombstone. Idempotent, 204. (The Bloom client writes encrypted tombstones with a clock stamp instead, so deletes merge field-level; see packages/sync.) |
+| `PUT /v1/shots/:machineId/:shotId` | Body: `"BSE\x01"|iv|ciphertext` (client-encrypted `.slog`), `application/octet-stream`, at most 1 MiB + 64. Plaintext is rejected (422) and so is `X-Shot-Meta`. Idempotent upsert; 201 / 200. |
+| `GET /v1/shots?machineId=&limit=&before=` | Ids, size and timestamps only, newest first. |
+| `GET /v1/shots/:machineId/:shotId` | Ciphertext bytes |
 | `DELETE /v1/shots/:machineId/:shotId` | 204 |
 
+There is no `PATCH`: the server cannot merge ciphertext, so merging happens on the client, guarded by `baseSeq`.
 Names: collection `[A-Za-z0-9_-]{1,64}`, doc/machine/shot ids `[A-Za-z0-9_.-]{1,128}`.
-Authentication is `Authorization: Bearer <token>`.
+Authentication is `Authorization: Bearer <token>`. Accounts created before E2E (no wrapped key) get 409 `legacy_account` on login.
 
 ### Sync model
 
-Every write (put, patch, delete) increments the user's `seq` and stamps the document with it, in one D1 batch, so a
-client that remembers the highest `seq` it has seen can fetch exactly what changed. Conflict policy is
-**last write wins per document** (server arrival order); there is no field-level merging except the shallow
-`PATCH`. `updatedAt` is the server clock and is informational; Bloom's own `updatedAt` fields inside the document
-bodies are untouched. Caps: 256 KB per doc, 20,000 live docs per user, 5,000 shots per user.
+Every write (put, delete) increments the user's `seq` and stamps the document with it, in one D1 batch. A conditional write does
+its check and the write in one SQL statement, so racing writers cannot both win (the loser still bumps `seq`; gaps are harmless).
+`updatedAt` is the server clock and informational. Caps: 256 KB per doc, 20,000 live docs per user, 5,000 shots per user.
 
-### D1 schema (`migrations/0001_init.sql`)
+### D1 schema (`migrations/0001_init.sql`, `0002_e2ee.sql`)
 
 - `users(id, email unique lowercased, name, pw_hash, seq, created_at)`
 - `sessions(token_hash pk, user_id, created_at, last_used_at, expires_at)`
 - `docs(user_id, collection, id, data json|null, deleted, updated_at, seq)` pk `(user_id, collection, id)`, index `(user_id, seq)`
 - `shots(user_id, machine_id, shot_id, data blob, size, meta json, created_at, updated_at)`
 - `rate_limits(key pk, window_start, count)`
+- `0002_e2ee.sql` (additive): `users.kdf_alg/kdf_iterations/kdf_salt/wrapped_dek/recovery_wrapped_dek/recovery_hash/key_version`, and `server_config(key, value)`. `docs.data` now holds envelopes; `shots.meta` is no longer written.
 
 ## Security notes
 
-- Passwords: PBKDF2-SHA256, 100,000 iterations (the maximum Workers' WebCrypto allows), 16-byte random salt, stored as
+- The password never arrives. The client sends `authKey` (HKDF of a 600k-round PBKDF2 master key); the server hashes that with PBKDF2-SHA256, 100,000 iterations (the maximum Workers' WebCrypto allows), 16-byte random salt, stored as
   `pbkdf2$sha256$iters$salt$hash`; constant-time compare; unknown emails burn the same CPU as known ones.
 - Sessions: 256-bit random opaque tokens; only the SHA-256 is stored. 30-day expiry that slides on use (refreshed at
   most hourly). Logout deletes the row.
@@ -86,10 +91,10 @@ and WebAuthn register/assert endpoints that end in the same `createSession`; mak
 
 ## Known limitations
 
-- No password reset or email verification yet (needs an email provider).
+- Password reset is by recovery key only (no email provider); no email verification yet.
 - No account deletion endpoint.
 - Rate limiting is per-D1-row and approximate; for serious abuse protection add Cloudflare's rate limiting rules.
 - The doc quota check is read-then-write, so concurrent requests can overshoot it slightly.
-- PBKDF2 at 100k iterations is below current OWASP guidance (600k); Workers does not allow more. Consider Argon2 via WASM later.
+- The server-side hash is 100k rounds (Workers' cap) but it protects a high-entropy authKey; the 600k-round stretching of the password happens on the client.
 - `@cloudflare/vitest-pool-workers` is deprecated in favour of `@cloudflare/vitest-plugin`; it is pinned and works, migrate when convenient.
 - Not exercised against a deployed Worker or remote D1, only local workerd/D1.

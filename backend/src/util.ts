@@ -1,6 +1,14 @@
 import type { Context } from 'hono';
 
-export type Bindings = { DB: D1Database; ALLOWED_ORIGINS?: string; AUTH_RATE_LIMIT?: string };
+export type Bindings = {
+  DB: D1Database;
+  ALLOWED_ORIGINS?: string;
+  AUTH_RATE_LIMIT?: string;
+  /** Optional secret for prelogin decoys (`wrangler secret put PRELOGIN_SECRET`). If unset one is generated into server_config. */
+  PRELOGIN_SECRET?: string;
+  /** Floor for client key-derivation rounds accepted at signup / password change. Default 600000; lower only in tests. */
+  MIN_KDF_ITERATIONS?: string;
+};
 export type Vars = { userId: string; tokenHash: string };
 export type AppEnv = { Bindings: Bindings; Variables: Vars };
 export type Ctx = Context<AppEnv>;
@@ -12,7 +20,8 @@ export class ApiError extends Error {
 }
 
 export const MAX_DOC_BYTES = 256 * 1024;
-export const MAX_SHOT_BYTES = 1024 * 1024;
+export const MAX_SHOT_BYTES = 1024 * 1024 + 64; // 1 MiB of .slog plus the encryption envelope
+export const DEFAULT_KDF_ITERATIONS = 600_000;
 export const MAX_DOCS_PER_USER = 20000;
 export const MAX_SHOTS_PER_USER = 5000;
 

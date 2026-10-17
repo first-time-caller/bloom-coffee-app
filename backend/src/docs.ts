@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireAuth } from './auth';
+import { Envelope, type EnvelopeT } from './e2ee';
 import { ApiError, MAX_DOCS_PER_USER, MAX_DOC_BYTES, type AppEnv, type Ctx } from './util';
-import { parseJson, readBody } from './validate';
+import { parseJson } from './validate';
 
 const NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const ID = /^[A-Za-z0-9_.-]{1,128}$/;
-const JsonObject = z.record(z.string(), z.unknown());
 
 function key(c: Ctx) {
   const collection = c.req.param('collection')!, id = c.req.param('id')!;
@@ -15,20 +15,28 @@ function key(c: Ctx) {
   return { collection, id };
 }
 
-/** Writes (upsert / tombstone) bump the user's seq and stamp the doc with it, in one D1 batch (a transaction). */
-async function writeDoc(c: Ctx, collection: string, id: string, data: object | null) {
+/**
+ * Writes (upsert / tombstone) bump the user's seq and stamp the doc with it, in one D1 batch (a transaction).
+ * With `baseSeq` the upsert is conditional (compare-and-swap): it only happens if the live document's seq still equals
+ * baseSeq (0 = "no live document"). The check and the write are one SQL statement, so two racing writers cannot both win.
+ * Returns null when the condition fails. (The seq counter is still bumped; gaps in seq are harmless.)
+ */
+async function writeDoc(c: Ctx, collection: string, id: string, data: EnvelopeT | null, baseSeq?: number) {
   const uid = c.get('userId');
   const now = new Date().toISOString();
+  const json = data === null ? null : JSON.stringify(data);
   const res = await c.env.DB.batch([
     c.env.DB.prepare('UPDATE users SET seq = seq + 1 WHERE id = ?').bind(uid),
     c.env.DB.prepare(
       `INSERT INTO docs(user_id,collection,id,data,deleted,updated_at,seq)
-       VALUES(?1,?2,?3,?4,?5,?6,(SELECT seq FROM users WHERE id=?1))
+       SELECT ?1,?2,?3,?4,?5,?6,(SELECT seq FROM users WHERE id=?1)
+       WHERE ?7 IS NULL OR ?7 = COALESCE((SELECT seq FROM docs WHERE user_id=?1 AND collection=?2 AND id=?3 AND deleted=0), 0)
        ON CONFLICT(user_id,collection,id) DO UPDATE SET
          data=excluded.data, deleted=excluded.deleted, updated_at=excluded.updated_at, seq=excluded.seq`
-    ).bind(uid, collection, id, data === null ? null : JSON.stringify(data), data === null ? 1 : 0, now),
+    ).bind(uid, collection, id, json, data === null ? 1 : 0, now, baseSeq ?? null),
     c.env.DB.prepare('SELECT seq FROM users WHERE id=?').bind(uid)
   ]);
+  if (!res[1].meta.changes) return null;
   const seq = (res[2].results[0] as { seq: number }).seq;
   return { collection, id, updatedAt: now, seq };
 }
@@ -56,24 +64,25 @@ docs.get('/docs/:collection/:id', async c => {
   return c.json({ collection, id, data: JSON.parse(row.data), updatedAt: row.updated_at, seq: row.seq });
 });
 
-/** Replace (create or overwrite). Last write wins. */
+/**
+ * Replace (create or overwrite) with an encrypted envelope {v,iv,ct}; anything else is rejected, so plaintext cannot be
+ * stored. Without `?baseSeq=` it is last-write-wins. With `?baseSeq=N` it is a conditional write: 409 `conflict` unless
+ * the live document's seq is still N (0 = the document must not exist). Clients use this to merge on their side.
+ */
 docs.put('/docs/:collection/:id', async c => {
   const { collection, id } = key(c);
-  const data = await parseJson(c, JsonObject, MAX_DOC_BYTES);
+  const bs = c.req.query('baseSeq');
+  let baseSeq: number | undefined;
+  if (bs !== undefined) {
+    if (!/^\d{1,15}$/.test(bs)) throw new ApiError(422, 'validation_failed', 'baseSeq: must be a non-negative integer');
+    baseSeq = Number(bs);
+  }
+  const data = await parseJson(c, Envelope, MAX_DOC_BYTES);
   const prev = await existing(c, collection, id);
   await checkQuota(c, !prev || !!prev.deleted);
-  return c.json(await writeDoc(c, collection, id, data));
-});
-
-/** Shallow merge into an existing doc (top-level keys replaced; null stores null). 404 if the doc does not exist. */
-docs.patch('/docs/:collection/:id', async c => {
-  const { collection, id } = key(c);
-  const patch = await parseJson(c, JsonObject, MAX_DOC_BYTES);
-  const prev = await existing(c, collection, id);
-  if (!prev || prev.deleted || prev.data === null) throw new ApiError(404, 'not_found', 'Document not found');
-  const merged = { ...JSON.parse(prev.data), ...patch };
-  if (new TextEncoder().encode(JSON.stringify(merged)).length > MAX_DOC_BYTES) throw new ApiError(413, 'too_large', 'Merged document too large');
-  return c.json(await writeDoc(c, collection, id, merged));
+  const w = await writeDoc(c, collection, id, data, baseSeq);
+  if (!w) throw new ApiError(409, 'conflict', 'The document changed since you read it; fetch the latest and merge again');
+  return c.json(w);
 });
 
 /** Delete leaves a tombstone so other devices learn about it. Idempotent. */

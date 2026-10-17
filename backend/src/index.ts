@@ -13,9 +13,8 @@ app.use('*', async (c, next) => {
   const allowed = new Set([...NATIVE_ORIGINS, ...(c.env.ALLOWED_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean)]);
   return cors({
     origin: o => (allowed.has(o) ? o : null),
-    allowHeaders: ['Authorization', 'Content-Type', 'X-Shot-Meta'],
-    exposeHeaders: ['X-Shot-Meta'],
-    allowMethods: ['GET', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Authorization', 'Content-Type'],
+    allowMethods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
     maxAge: 600
   })(c, next);
 });
