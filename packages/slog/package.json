@@ -1,0 +1,19 @@
+{
+  "name": "bloom-slog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Parser for GaggiMate .slog shot files and index.bin",
+  "scripts": {
+    "test": "vitest run",
+    "fixtures": "node test/make-fixtures.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild src/browser.ts --bundle --minify --format=iife --target=es2019 --outfile=../../web/vendor/bloom-slog.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
