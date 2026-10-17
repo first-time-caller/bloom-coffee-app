@@ -1,5 +1,4 @@
 {
   "name": "bloom",
-  "private": true,
-  "workspaces": ["packages/*", "backend"]
+  "private": true
 }
