@@ -36,7 +36,7 @@ async function signedInFacade() {
 }
 
 beforeAll(async () => {
-  await import(/* @vite-ignore */ '../../web/bloom-sync.js' as string);
+  await import('../../web/bloom-sync.js');
   BS = g.BloomSync;
   expect(BS).toBeTruthy();
 });

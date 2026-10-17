@@ -6,9 +6,16 @@
 - **packages/contract/** Shared TypeScript types. This is the source of truth for data shapes.
 - **packages/slog/** A TypeScript parser for GaggiMate `.slog` shot files and `index.bin`. It builds to `web/vendor/bloom-slog.js`, which exposes `window.BloomSlog`.
 - **backend/** Cloudflare Workers, Hono and D1. It handles accounts and document sync, and stores raw shot files.
-- **app/** (phase B) A Capacitor shell for iOS and Android. It talks to the GaggiMate over the LAN and syncs to the backend.
+- **app/** (phase B) A React Native (Expo) app with native UI for iOS and Android. It reuses `packages/contract`, `packages/slog` and `packages/sync`, talks to the GaggiMate over the LAN, and syncs to the backend.
+- **packages/sync/** A platform-neutral TypeScript sync and crypto core. It builds to `web/bloom-sync.js` for the web app and is imported directly by the mobile app.
 
 The browser cannot reach the machine (plain http, no CORS). Only the native app talks to the GaggiMate. The web app keeps manual espresso entry.
+
+## Principles (enforced by CI gates, see QUALITY-GATES.md)
+
+- **Local-first and private.** Data is end-to-end encrypted: the server stores only ciphertext. There are no third-party requests or trackers, and data collection is kept to a minimum.
+- **Native UI on mobile.** No web wrappers.
+- **Reliability and performance.** Tests, coverage, migration safety, bundle and performance budgets, no memory leaks, deterministic state restoration, and full accessibility (Dynamic Type and font scaling, screen readers, high contrast, dark mode).
 
 ## GaggiMate facts (verified from source)
 
@@ -23,8 +30,8 @@ The browser cannot reach the machine (plain http, no CORS). Only the native app 
 
 1. The `.slog` and index parser, with tests (packages/slog).
 2. Espresso mode in the web app, using sample data (web/).
-3. The Capacitor shell, a local machine connection, and shot import (app/).
-4. The backend, accounts, and sync (backend/, plus the web adapter).
+3. The React Native (Expo) app, a local machine connection, and shot import (app/).
+4. The backend, accounts, and sync (backend/, plus the web adapter). Then end-to-end encryption (packages/sync).
 5. A live brewing view and profile selection.
 
 Phase A runs steps 1, 2 and 4 in parallel. Phase B runs steps 3 and 5 after A is integrated.
