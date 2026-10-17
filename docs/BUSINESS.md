@@ -8,18 +8,27 @@ Status: draft. Prices and fees below come from memory as of 2026 and are **not v
 - **Your data is always yours.** No paywall or lockout ever blocks reading, exporting or deleting data the user created.
 - Privacy promises in the app must be literally true. If a third party is used, it is disclosed.
 
-## Free preview
+## What's free and what's Pro
 
-- Every feature is available for the first **3 completed brews** (filter or espresso), counted per account. Before sign-in, the count is kept per device.
-- After that, **logging new brews** needs Pro. These always stay free:
-  - viewing history, charts and the shelf
-  - exporting all data (JSON and CSV)
-  - deleting your account and data
-  - sync of existing data
-- The lock is graceful: one calm screen explaining why, the price options, and a "not now" that goes back to read-only.
-- No card is required for the preview, and there are no automatic charges after it.
+**Always free, on every platform, with no limits:**
+- Everything for pour-over and filter coffee: the guided brew, recipes, timer, grind suggestions, shelf and bags, and history.
+- Manual espresso logging: dose, yield, time, ratio, rating, notes, and charts for imported files.
+- Sync across devices, with end-to-end encryption.
+- Export (JSON and CSV) and account deletion.
 
-**Requirement:** the counter and entitlement check live in `packages/shared-sync-core`, so web and mobile behave the same. They are covered by tests: brew 3 completes, brew 4 is gated, and export still works while locked.
+**Pro (supports development): connected machines and devices.**
+- GaggiMate link: automatic shot import from the machine, full shot charts with pressure, flow, temperature and scale weight, the live brew view, and profile selection.
+- Future machine integrations, such as La Marzocco, Decent, Meticulous and Gaggiuino, as they ship.
+- Possibly later: advanced shot analysis (comparing shots and overlaying curves).
+
+**Pro trial:** the machine link is free for 20 imported shots or 14 days, whichever lasts longer. That gives an espresso user time to dial in a bag and judge the charts. After the trial:
+- Shots already imported stay readable and exportable forever.
+- New automatic imports stop, and manual logging still works.
+
+**Requirement:** the entitlement and trial logic lives in `packages/shared-sync-core`, shared by web and mobile, and is tested:
+- the trial boundary (20 shots and 14 days);
+- after the trial, imported shots stay viewable and exportable;
+- an outage fails open.
 
 ## Tiers
 

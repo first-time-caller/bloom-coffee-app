@@ -59,3 +59,39 @@ Phase A runs steps 1, 2 and 4 in parallel. Phase B runs steps 3 and 5 after A is
 - Email verification at sign-up.
 - Account deletion is available in the app while signed in.
 - Deletion with a forgotten password: an emailed confirmation link starts the deletion, followed by a 7-day cancellable cooling-off period. Any signed-in device can cancel it. The recovery key also proves ownership.
+
+## Backlog from the product review
+
+**Phase B (Expo app)**
+- Parser failures go through one wrapper. An unsupported firmware or format version gets a calm "This firmware's shot format isn't supported yet" message. The raw file is kept, so it can be re-parsed after an update, and summary fields from the index are still shown. The app never crashes.
+- Real exported shots from the developer's machine become the primary CI fixtures, alongside the synthetic ones.
+- A "connect soon" banner appears when the machine hasn't been reached for 7 days, and earlier if the machine's history is nearly full.
+- Shot identity: the dedupe key is `machineId + shotId + startedAt (UTC)`. If the machine clock was never synced (`startedAt` before 2020), the import time is used for display and the raw values are kept, so the key stays stable when the shot is imported again.
+- Local-only machine link: the app refuses machine addresses that aren't private, link-local or `.local` (RFC 1918, RFC 4193, 169.254/16 and mDNS). Settings shows a note that the machine has no password and must never be exposed to the internet.
+- Opt-in crash reports: after a crash, the next launch asks once. If the user agrees, a scrubbed report goes to `POST /v1/errors` on our Worker, in a separate D1 table with 30-day retention. The report holds the error type, a stack trace with paths stripped, the app and OS version, and nothing else: no ids, keys, tokens or user content. It is rate limited.
+- Local SQLite on device for history, search and stats, since the server can't search ciphertext.
+- On-device label scanning with Apple Vision and Google ML Kit text recognition.
+- Demo mode is shown on the sign-in screen and uses sample shots and a simulated machine. It is not a hidden flag, so reviewers and curious users can find it.
+- Account deletion is visible under Settings → Account.
+- Every UI string lives in the i18n catalogue from day one, and units (g/oz, °C/°F) follow the user's setting everywhere, including charts.
+
+**Web**
+- The espresso chart must respect the existing unit setting (°F), because it currently always shows °C.
+- Add an importer for the legacy JSON export from the hosted claude.ai Bloom (Settings → Your data → Export), plus a short migration page.
+- The web app stays fully featured for pour-over until the Expo app reaches parity. After that it becomes the companion: account, import and export, desktop shot analysis, and web purchase.
+
+**Backend**
+- Email verification and a self-hosted proof-of-work challenge on sign-up, on top of rate limits. Cloudflare Turnstile is avoided because it loads a third-party script, which fails the privacy gate.
+- Backups: D1 Time Travel, plus a scheduled encrypted `wrangler d1 export` to R2 or offsite storage, with a restore drill documented.
+- Support is self-service only for lost keys; the operator cannot recover data, by design. The support address is support@<domain>.
+
+**Phase C (broaden the market)**
+- Phone-to-scale Bluetooth for pour-over and manual espresso (Acaia and Felicita). Check the licensing of any reverse-engineered protocol library before use.
+- Export to Visualizer.coffee: a file export first. Upload through their API only when the user explicitly asks, with their own credentials, and disclosed as a third party.
+- Recipe sharing with public-key encryption to a friend's key.
+- More machines: La Marzocco (cloud API) and Decent, Meticulous and Gaggiuino (local APIs).
+
+**Owner actions (not code)**
+- Contact the GaggiMate maintainer about partnership or revenue share, and get written consent before using the name in marketing.
+- Commission a human cryptography review before advertising end-to-end encryption.
+- Run a trademark search for "Bloom".
